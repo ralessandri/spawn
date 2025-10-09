@@ -1,0 +1,19 @@
+{
+	"name": "hellyeah/spawn",
+	"description": "Symfony make-inspired CLI tool for generating frequently used classes and TYPO3 components",
+	"type": "typo3-cms-extension",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"typo3/cms-core": "^13.4"
+	},
+	"autoload": {
+		"psr-4": {
+			"HellYeah\\Spawn\\": "Classes/"
+		}
+	},
+	"extra": {
+		"typo3/cms": {
+			"extension-key": "spawn"
+		}
+	}
+}

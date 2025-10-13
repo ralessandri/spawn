@@ -2,8 +2,23 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 CMS project.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE.txt file that was distributed with this source code.
+ *
+ * The TYPO3 project - inspiring people to share!
+ */
+
 namespace HellYeah\Spawn\Command;
 
+use HellYeah\Spawn\Event\PostGenerateEvent;
+use HellYeah\Spawn\Event\PreGenerateEvent;
 use HellYeah\Spawn\Service\ExtensionService;
 use HellYeah\Spawn\Service\FileWriterService;
 use HellYeah\Spawn\Service\GeneratorRegistryService;
@@ -15,6 +30,7 @@ use HellYeah\Spawn\ValueObject\ClassNamespace;
 use HellYeah\Spawn\ValueObject\CommandAttribute;
 use HellYeah\Spawn\ValueObject\ExtensionName;
 use HellYeah\Spawn\ValueObject\NamespacePrefix;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -34,8 +50,8 @@ abstract class AbstractGeneratorCommand extends Command
         protected readonly FileWriterService $fileWriterService,
         protected readonly InputValidatorService $inputValidatorService,
         protected readonly GeneratorRegistryService $generatorRegistry,
-    )
-    {
+        private readonly EventDispatcherInterface $eventDispatcher,
+    ) {
         parent::__construct();
     }
 
@@ -65,7 +81,7 @@ abstract class AbstractGeneratorCommand extends Command
         $inputs = $this->gatherInputs($input);
 
         // Dispatch pre-generate event
-        //$this->eventDispatcher->dispatch(new PreGenerateEvent($inputs), PreGenerateEvent::NAME);
+        $this->eventDispatcher->dispatch(new PreGenerateEvent($inputs));
 
         $templateCode = $this->processTemplate($inputs);
         $targetPath = $this->getTargetPath($inputs);
@@ -73,7 +89,7 @@ abstract class AbstractGeneratorCommand extends Command
         $this->fileWriterService->write($targetPath, $templateCode);
 
         // Dispatch post-generate event
-        //$this->eventDispatcher->dispatch(new PostGenerateEvent($inputs, $targetPath), PostGenerateEvent::NAME);
+        $this->eventDispatcher->dispatch(new PostGenerateEvent($inputs, $targetPath));
 
         $this->io->success('Successfully generated the requested file.');
 
@@ -114,7 +130,7 @@ abstract class AbstractGeneratorCommand extends Command
      *
      * @param array $inputs Validated input data.
      *
-     * @return string Absolute target path.
+     * @return string
      * @throws \HellYeah\Spawn\Exception\AbstractException
      * @throws \TYPO3\CMS\Core\Package\Exception\UnknownPackageException
      */

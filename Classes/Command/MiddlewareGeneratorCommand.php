@@ -21,13 +21,13 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 
-#[AsCommand(name:'spawn:middleware', description:'Creates a new TYPO3 middleware')]
+#[AsCommand(name: 'spawn:middleware', description: 'Creates a new TYPO3 middleware')]
 class MiddlewareGeneratorCommand extends AbstractGeneratorCommand
 {
     protected function configure(): void
     {
         $this
-            ->addArgument('extension', InputArgument::OPTIONAL, 'The target extension key (e.g., "my_extension")')
+            ->addArgument('extension', InputArgument::OPTIONAL, 'The target extension key (e.g., "awesome_extension")')
             ->addArgument('class', InputArgument::OPTIONAL, 'The middleware class name (e.g., "AwesomeMiddleware")')
             ->addArgument('namespace', InputArgument::OPTIONAL, 'The namespace prefix (e.g., "Vendor\\Extension\\")');
     }

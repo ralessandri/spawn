@@ -27,7 +27,7 @@ use Symfony\Component\Console\Input\InputInterface;
 /**
  * Command to generate a TYPO3 action controller class.
  */
-#[AsCommand(name:'spawn:controller', description:'Creates a new TYPO3 action controller')]
+#[AsCommand(name: 'spawn:controller', description: 'Creates a new TYPO3 action controller')]
 class ControllerGeneratorCommand extends AbstractGeneratorCommand
 {
     /**
@@ -36,7 +36,7 @@ class ControllerGeneratorCommand extends AbstractGeneratorCommand
     protected function configure(): void
     {
         $this
-            ->addArgument('extension', InputArgument::OPTIONAL, 'The target extension key (e.g., "my_extension")')
+            ->addArgument('extension', InputArgument::OPTIONAL, 'The target extension key (e.g., "awesome_extension")')
             ->addArgument('class', InputArgument::OPTIONAL, 'The controller class name (e.g., "AwesomeController")')
             ->addArgument('namespace', InputArgument::OPTIONAL, 'The namespace prefix (e.g., "Vendor\\Extension\\")');
     }
@@ -44,10 +44,9 @@ class ControllerGeneratorCommand extends AbstractGeneratorCommand
     /**
      * Gathers and validates inputs for controller generation.
      *
-     * @param \Symfony\Component\Console\Input\InputInterface $input
-     *
      * @return array{type: string, extension: ExtensionName, className: ClassName, namespace: ClassNamespace}
      * @throws \HellYeah\Spawn\Exception\AbstractException
+     * @throws \TYPO3\CMS\Core\Package\Exception\UnknownPackageException
      */
     protected function gatherInputs(InputInterface $input): array
     {

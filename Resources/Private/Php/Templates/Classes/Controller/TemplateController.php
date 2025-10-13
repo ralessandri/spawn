@@ -25,6 +25,9 @@ class TemplateController extends ActionController
     public function indexAction(): ResponseInterface
     {
         $arguments = $this->request->getArguments();
+
+        // @todo implement controller
+
         $this->view->assignMultiple([
             'arguments' => $arguments,
         ]);

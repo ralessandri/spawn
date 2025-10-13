@@ -27,4 +27,14 @@ class PostGenerateEvent extends Event
     public const string NAME = 'spawn.post_generate';
 
     public function __construct(public array $inputs, public string $targetPath) {}
+
+    public function getInputs(): array
+    {
+        return $this->inputs;
+    }
+
+    public function getTargetPath(): string
+    {
+        return $this->targetPath;
+    }
 }

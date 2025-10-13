@@ -37,8 +37,7 @@ class ClassNamespace
         NamespacePrefix $prefix,
         string $subNamespace,
         InputValidatorService $validator,
-    )
-    {
+    ) {
         $validator->validateSubNamespace($subNamespace);
 
         $this->value = rtrim($prefix->getValue(), '\\') . '\\' . $subNamespace;

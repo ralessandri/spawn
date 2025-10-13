@@ -15,7 +15,7 @@ declare(strict_types=1);
  * The TYPO3 project - inspiring people to share!
  */
 
-namespace Command;
+namespace TemplateCommand;
 
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -35,6 +35,7 @@ class TemplateCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        // @todo implement command
         return Command::SUCCESS;
     }
 

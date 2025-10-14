@@ -19,6 +19,14 @@ namespace HellYeah\Spawn\Service;
 
 class FormatterService
 {
+    /**
+     * Adds an empty line between service definitions in a YAML string.
+     * Ensures that there is no empty line before the _defaults: section.
+     *
+     * @param string $yaml The input YAML string
+     *
+     * @return string The formatted YAML string with empty lines between services
+     */
     public function addEmptyLineBetweenYamlServices(string $yaml): string
     {
         $lines = explode("\n", $yaml);

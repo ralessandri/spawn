@@ -27,7 +27,6 @@ use HellYeah\Spawn\Service\PhpParserService;
 use HellYeah\Spawn\Service\TemplateLoaderService;
 use HellYeah\Spawn\ValueObject\ClassName;
 use HellYeah\Spawn\ValueObject\ClassNamespace;
-use HellYeah\Spawn\ValueObject\CommandAttribute;
 use HellYeah\Spawn\ValueObject\ExtensionName;
 use HellYeah\Spawn\ValueObject\NamespacePrefix;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -66,7 +65,7 @@ abstract class AbstractGeneratorCommand extends Command
     /**
      * Gathers and validates user inputs based on the generation type.
      *
-     * @return array Validated input data (e.g., extension, class name, namespace).
+     * @return array Validated input data (e.g., extension, class name, namespace, options).
      */
     abstract protected function gatherInputs(InputInterface $input): array;
 
@@ -111,11 +110,11 @@ abstract class AbstractGeneratorCommand extends Command
 
         $parser = $this->phpParserService->setCode($templateCode);
 
-        // Handle command-specific attributes if present
-        if ($inputs['type'] === 'command' && isset($inputs['attributes']['commandName'], $inputs['attributes']['commandDescription'])) {
+        // Handle command-specific options if present
+        if ($inputs['type'] === 'command' && isset($inputs['options']['commandName'], $inputs['options']['commandDescription'])) {
             $parser->setCommandAttribute(
-                $inputs['attributes']['commandName']->getValue(),
-                $inputs['attributes']['commandDescription']->getValue()
+                $inputs['options']['commandName']->getValue(),
+                $inputs['options']['commandDescription']->getValue()
             );
         }
 
@@ -144,7 +143,7 @@ abstract class AbstractGeneratorCommand extends Command
     }
 
     /**
-     * Gathers common inputs for class generation (extension, class name, namespace, optional attributes).
+     * Gathers common inputs for class generation (extension, class name, namespace, options).
      *
      * @param \Symfony\Component\Console\Input\InputInterface $input
      * @param string $type The generation type (e.g., 'controller', 'command').
@@ -152,16 +151,14 @@ abstract class AbstractGeneratorCommand extends Command
      * @param string $askPrompt The prompt for interactive class name input.
      * @param string $defaultName The default class name for interactive input.
      *
-     * @return array{type: string, extension: ExtensionName, className: ClassName, namespace: ClassNamespace, attributes?: array<string, CommandAttribute>}
+     * @return array{type: string, extension: ExtensionName, className: ClassName, namespace: ClassNamespace, options?: array<string, object>}
      * @throws \HellYeah\Spawn\Exception\AbstractException
      * @throws \TYPO3\CMS\Core\Package\Exception\UnknownPackageException
      */
     protected function gatherCommonInputs(InputInterface $input, string $type, string $classArgumentName, string $askPrompt, string $defaultName): array
     {
         $extension = $this->askForExtensionName($input);
-
         $className = $this->askForClassname($input, $type, $classArgumentName, $askPrompt, $defaultName);
-
         $prefix = $this->askForNamespacePrefix($input, $extension);
 
         $config = $this->generatorRegistry->getConfig($type);
@@ -174,7 +171,7 @@ abstract class AbstractGeneratorCommand extends Command
             'namespace' => $namespace,
         ];
 
-        // Handle additional attributes from registry
+        // Handle additional options from registry
         return $this->handleAdditionalInputsFromRegistry($input, $extension, $className, $config, $inputs);
     }
 
@@ -241,7 +238,7 @@ abstract class AbstractGeneratorCommand extends Command
     }
 
     /**
-     * Handles additional attributes and options from the registry.
+     * Handles additional options from the registry, using Value Objects.
      *
      * @param InputInterface $input
      * @param ExtensionName $extension
@@ -259,61 +256,40 @@ abstract class AbstractGeneratorCommand extends Command
         array $config,
         array $inputs,
     ): array {
-        // Handle attributes (e.g., commandName, commandDescription)
-        if (isset($config['attributes']) && is_array($config['attributes'])) {
-            $inputs['attributes'] = [];
-            foreach ($config['attributes'] as $attribute) {
-                $argumentName = $attribute === 'commandName' ? 'command-name' : 'command-description';
-                $value = $input->getArgument($argumentName);
-                if (! $value) {
-                    if ($attribute === 'commandName') {
-                        $defaultValue = strtolower($extension->getValue()) . ':' . strtolower(str_replace('Command', '', $className->getValue()));
-                        $prompt = 'Enter the command name (e.g., "myext:awesome")';
-                    } else {
-                        $defaultValue = 'Executes ' . strtolower(str_replace('Command', '', $className->getValue())) . ' action';
-                        $prompt = 'Enter the command description (e.g., "Executes awesome action")';
-                    }
-                    $value = $this->io->ask(
-                        $prompt,
-                        $defaultValue,
-                        fn(string $val) => $attribute === 'commandName'
-                            ? $this->inputValidatorService->validateCommandNameAttribute($val)
-                            : $this->inputValidatorService->validateCommandDescriptionAttribute($val)
-                    );
-                } else {
-                    $value = $attribute === 'commandName'
-                        ? $this->inputValidatorService->validateCommandNameAttribute($value)
-                        : $this->inputValidatorService->validateCommandDescriptionAttribute($value);
-                }
-                $inputs['attributes'][$attribute] = new CommandAttribute($value, $attribute, $this->inputValidatorService);
-            }
-        }
-
-        // Handle additional options (e.g., schedulable)
         if (isset($config['additionalOptions']) && is_array($config['additionalOptions'])) {
             $inputs['options'] = [];
             foreach ($config['additionalOptions'] as $optionName => $optionConfig) {
                 $value = $input->getArgument($optionConfig['argumentName']);
+                $defaultValue = $optionConfig['default'];
+
+                // Set dynamic defaults for commandName and commandDescription
+                if ($optionName === 'commandName' && $defaultValue === null) {
+                    $defaultValue = strtolower($extension->getValue()) . ':' . strtolower(str_replace('Command', '', $className->getValue()));
+                } elseif ($optionName === 'commandDescription' && $defaultValue === null) {
+                    $defaultValue = 'Executes ' . strtolower(str_replace('Command', '', $className->getValue())) . ' action';
+                }
+
                 if (! $value) {
                     if ($optionConfig['type'] === 'boolean' && isset($optionConfig['choices'])) {
-                        // Use choice for boolean options
                         $value = $this->io->choice(
                             $optionConfig['prompt'],
                             array_combine($optionConfig['choices'], $optionConfig['choices']),
-                            $optionConfig['default']
+                            $defaultValue
                         );
                     } else {
-                        // Use ask for other types
                         $value = $this->io->ask(
                             $optionConfig['prompt'],
-                            $optionConfig['default'],
+                            $defaultValue,
                             fn(string $val) => $this->inputValidatorService->{$optionConfig['validator']}($val)
                         );
                     }
                 } else {
                     $value = $this->inputValidatorService->{$optionConfig['validator']}($value);
                 }
-                $inputs['options'][$optionName] = $value; // Store as raw value (boolean for schedulable)
+
+                // Instantiate the specified Value Object
+                $valueObjectClass = $optionConfig['valueObject'] ?? \HellYeah\Spawn\ValueObject\CommandAttribute::class;
+                $inputs['options'][$optionName] = new $valueObjectClass($value, $optionName, $this->inputValidatorService);
             }
         }
 

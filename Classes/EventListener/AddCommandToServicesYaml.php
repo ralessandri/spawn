@@ -66,7 +66,7 @@ final class AddCommandToServicesYaml
     }
 
     /**
-     * Checks if the event should be processed based on type, hooks, and attributes.
+     * Checks if the event should be processed based on type, hooks, and options.
      *
      * @throws \HellYeah\Spawn\Exception\InvalidArgumentException
      */
@@ -81,8 +81,12 @@ final class AddCommandToServicesYaml
             return false;
         }
 
-        // Ensure required attributes exist
-        return isset($inputs['attributes']['commandName'], $inputs['attributes']['commandDescription']);
+        // Ensure required options exist
+        return isset(
+            $inputs['options']['commandName'],
+            $inputs['options']['commandDescription'],
+            $inputs['options']['schedulable']
+        );
     }
 
     /**
@@ -115,12 +119,12 @@ final class AddCommandToServicesYaml
         $serviceId = $inputs['namespace'] . '\\' . $inputs['className'];
         $commandTag = [
             'name' => 'console.command',
-            'command' => $inputs['attributes']['commandName']->getValue(),
-            'description' => $inputs['attributes']['commandDescription']->getValue(),
+            'command' => $inputs['options']['commandName']->getValue(),
+            'description' => $inputs['options']['commandDescription']->getValue(),
         ];
 
         // Add schedulable only if explicitly set to 'false'
-        if (isset($inputs['options']['schedulable']) && $inputs['options']['schedulable'] === 'false') {
+        if ($inputs['options']['schedulable']->getValue() === 'false') {
             $commandTag['schedulable'] = false;
         }
 

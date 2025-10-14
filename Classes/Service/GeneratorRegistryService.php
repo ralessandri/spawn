@@ -18,6 +18,8 @@ declare(strict_types=1);
 namespace HellYeah\Spawn\Service;
 
 use HellYeah\Spawn\Exception\InvalidArgumentException;
+use HellYeah\Spawn\ValueObject\CommandAttribute;
+use HellYeah\Spawn\ValueObject\Schedulable;
 
 /**
  * Registry for class generation configurations, allowing scalable addition of types.
@@ -52,13 +54,30 @@ class GeneratorRegistryService
                 'attributes' => ['commandName', 'commandDescription'],
                 'postHooks' => ['addCommandToServicesYaml'],
                 'additionalOptions' => [
+                    'commandName' => [
+                        'type' => 'string',
+                        'argumentName' => 'command-name',
+                        'prompt' => 'Enter the command name (e.g., "myext:awesome")',
+                        'default' => null,
+                        'validator' => 'validateCommandNameAttribute',
+                        'valueObject' => CommandAttribute::class,
+                    ],
+                    'commandDescription' => [
+                        'type' => 'string',
+                        'argumentName' => 'command-description',
+                        'prompt' => 'Enter the command description (e.g., "Executes awesome action")',
+                        'default' => null,
+                        'validator' => 'validateCommandDescriptionAttribute',
+                        'valueObject' => CommandAttribute::class,
+                    ],
                     'schedulable' => [
                         'type' => 'boolean',
                         'argumentName' => 'schedulable',
-                        'prompt' => 'Should the command be schedulable? (false/true)',
-                        'choices' => ['false', 'true'],
-                        'default' => 'false',
+                        'prompt' => 'Should the command be schedulable? (no/yes)',
+                        'choices' => ['no', 'yes'],
+                        'default' => 'no',
                         'validator' => 'validateBoolean',
+                        'valueObject' => Schedulable::class,
                     ],
                 ],
             ],

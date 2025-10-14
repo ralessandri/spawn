@@ -17,120 +17,71 @@ declare(strict_types=1);
 
 namespace HellYeah\Spawn\Service;
 
-use HellYeah\Spawn\Exception\InvalidArgumentException;
-use HellYeah\Spawn\ValueObject\CommandAttribute;
-use HellYeah\Spawn\ValueObject\Schedulable;
+use HellYeah\Spawn\Exception\InvalidConfigurationException;
+use TYPO3\CMS\Core\Package\PackageManager;
 
 /**
- * Registry for class generation configurations, allowing scalable addition of types.
+ * Service to provide generator configuration.
  */
 class GeneratorRegistryService
 {
-    private array $configuration = [];
+    private array $config = [];
 
-    public function __construct()
-    {
+    /**
+     * @throws \TYPO3\CMS\Core\Package\Exception\UnknownPackageException
+     * @throws \HellYeah\Spawn\Exception\AbstractException
+     */
+    public function __construct(
+        private readonly FilesystemService $filesystemService,
+        private readonly PackageManager $packageManager,
+    ) {
         $this->loadConfiguration();
     }
 
     /**
-     * Loads generation configurations from a YAML file or array.
+     * Loads the generator configuration from Configuration/Spawn.php.
+     *
+     * @throws \HellYeah\Spawn\Exception\AbstractException
+     * @throws \TYPO3\CMS\Core\Package\Exception\UnknownPackageException
      */
     private function loadConfiguration(): void
     {
-        // Example: Load from YAML or hardcode; in production, use YAML for extensibility
-        $this->configuration = [
-            'controller' => [
-                'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Controller/TemplateController.php',
-                'subNamespace' => 'Controller',
-                'targetDir' => 'Classes/Controller/',
-                'classNameSuffix' => 'Controller',
-            ],
-            'command' => [
-                'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Command/TemplateCommand.php',
-                'subNamespace' => 'Command',
-                'targetDir' => 'Classes/Command/',
-                'classNameSuffix' => 'Command',
-                'attributes' => ['commandName', 'commandDescription'],
-                'postHooks' => ['addCommandToServicesYaml'],
-                'additionalOptions' => [
-                    'commandName' => [
-                        'type' => 'string',
-                        'argumentName' => 'command-name',
-                        'prompt' => 'Enter the command name (e.g., "myext:awesome")',
-                        'default' => null,
-                        'validator' => 'validateCommandNameAttribute',
-                        'valueObject' => CommandAttribute::class,
-                    ],
-                    'commandDescription' => [
-                        'type' => 'string',
-                        'argumentName' => 'command-description',
-                        'prompt' => 'Enter the command description (e.g., "Executes awesome action")',
-                        'default' => null,
-                        'validator' => 'validateCommandDescriptionAttribute',
-                        'valueObject' => CommandAttribute::class,
-                    ],
-                    'schedulable' => [
-                        'type' => 'boolean',
-                        'argumentName' => 'schedulable',
-                        'prompt' => 'Should the command be schedulable? (no/yes)',
-                        'choices' => ['no', 'yes'],
-                        'default' => 'no',
-                        'validator' => 'validateBoolean',
-                        'valueObject' => Schedulable::class,
-                    ],
-                ],
-            ],
-            'middleware' => [
-                'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Middleware/TemplateMiddleware.php',
-                'subNamespace' => 'Middleware',
-                'targetDir' => 'Classes/Middleware/',
-                'classNameSuffix' => 'Middleware',
-            ],
-            'model' => [
-                'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Model/TemplateModel.php',
-                'subNamespace' => 'Domain\Model',
-                'targetDir' => 'Classes/Domain/Model/',
-                'classNameSuffix' => '',
-            ],
-            'repository' => [
-                'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Repository/TemplateRepository.php',
-                'subNamespace' => 'Domain\Repository',
-                'targetDir' => 'Classes/Domain/Repository/',
-                'classNameSuffix' => 'Repository',
-            ],
-            'event' => [
-                'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Event/TemplateEvent.php',
-                'subNamespace' => 'Event',
-                'targetDir' => 'Classes/Event/',
-                'classNameSuffix' => 'Event',
-            ],
-            // Add more types as needed, e.g. 'service', 'viewhelper'
-        ];
-    }
+        $package = $this->packageManager->getPackage('spawn');
+        $configFile = $package->getPackagePath() . 'Configuration/Spawn.php';
 
-    /**
-     * Retrieves the configuration for a specific generation type.
-     *
-     * @throws InvalidArgumentException If the type is not registered.
-     */
-    public function getConfig(string $type): array
-    {
-        if (! isset($this->configuration[$type])) {
-            throw new InvalidArgumentException(
-                sprintf('Unknown generation type: "%s"', $type),
-                1759257210
+        if (! $this->filesystemService->fileExists($configFile)) {
+            throw new InvalidConfigurationException(
+                sprintf('Configuration file "%s" not found', $configFile),
+                1738923456
             );
         }
 
-        return $this->configuration[$type];
+        $config = include $configFile;
+
+        if (! is_array($config)) {
+            throw new InvalidConfigurationException(
+                sprintf('Configuration file "%s" must return an array', $configFile),
+                1760453783768
+            );
+        }
+
+        $this->config = $config;
     }
 
     /**
-     * Returns a list of registered types for choice prompts.
+     * Returns the configuration for a given generator type.
+     *
+     * @throws InvalidConfigurationException
      */
-    public function getRegisteredTypes(): array
+    public function getConfig(string $type): array
     {
-        return array_keys($this->configuration);
+        if (! isset($this->config[$type])) {
+            throw new InvalidConfigurationException(
+                sprintf('No configuration found for type "%s"', $type),
+                1760453783781
+            );
+        }
+
+        return $this->config[$type];
     }
 }

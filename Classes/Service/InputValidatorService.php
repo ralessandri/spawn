@@ -247,4 +247,17 @@ class InputValidatorService
 
         return $type;
     }
+
+    /**
+     * @throws \HellYeah\Spawn\Exception\InvalidArgumentException
+     */
+    public function validateBoolean(string $value): bool
+    {
+        $normalized = strtolower(trim($value));
+        if (! in_array($normalized, ['yes', 'no', 'true', 'false', '1', '0'], true)) {
+            throw new InvalidArgumentException('Value must be "yes", "no", "true", "false", "1", or "0"', 1759257220);
+        }
+
+        return in_array($normalized, ['yes', 'true', '1'], true);
+    }
 }

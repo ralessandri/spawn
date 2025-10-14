@@ -144,23 +144,6 @@ abstract class AbstractGeneratorCommand extends Command
     }
 
     /**
-     * Asks for the extension name interactively or from input.
-     *
-     * @return string Validated extension name.
-     * @throws \HellYeah\Spawn\Exception\AbstractException
-     */
-    protected function askForExtensionName(InputInterface $input): string
-    {
-        if ($extension = $input->getArgument('extension')) {
-            return $this->inputValidatorService->validateExtensionName($extension);
-        }
-
-        $extensions = array_map(fn($ext) => $ext->getValue(), $this->extensionService->getAvailableExtensions());
-
-        return $this->io->choice('Select an extension to work on', $extensions);
-    }
-
-    /**
      * Gathers common inputs for class generation (extension, class name, namespace, optional attributes).
      *
      * @param \Symfony\Component\Console\Input\InputInterface $input
@@ -176,8 +159,50 @@ abstract class AbstractGeneratorCommand extends Command
     protected function gatherCommonInputs(InputInterface $input, string $type, string $classArgumentName, string $askPrompt, string $defaultName): array
     {
         $extension = $this->askForExtensionName($input);
-        $extension = new ExtensionName($extension, $this->inputValidatorService);
 
+        $className = $this->askForClassname($input, $type, $classArgumentName, $askPrompt, $defaultName);
+
+        $prefix = $this->askForNamespacePrefix($input, $extension);
+
+        $config = $this->generatorRegistry->getConfig($type);
+        $namespace = new ClassNamespace($prefix, $config['subNamespace'], $this->inputValidatorService);
+
+        $inputs = [
+            'type' => $type,
+            'extension' => $extension,
+            'className' => $className,
+            'namespace' => $namespace,
+        ];
+
+        // Handle additional attributes from registry
+        return $this->handleAdditionalInputsFromRegistry($input, $extension, $className, $config, $inputs);
+    }
+
+    /**
+     * Asks for the extension name interactively or from input.
+     *
+     * @param \Symfony\Component\Console\Input\InputInterface $input
+     *
+     * @return \HellYeah\Spawn\ValueObject\ExtensionName
+     * @throws \HellYeah\Spawn\Exception\AbstractException
+     */
+    protected function askForExtensionName(InputInterface $input): ExtensionName
+    {
+        if ($extension = $input->getArgument('extension')) {
+            $this->inputValidatorService->validateExtensionName($extension);
+        }
+
+        $extensions = array_map(fn($ext) => $ext->getValue(), $this->extensionService->getAvailableExtensions());
+        $extension = $this->io->choice('Select an extension to work on', $extensions);
+
+        return new ExtensionName($extension, $this->inputValidatorService);
+    }
+
+    /**
+     * @throws \HellYeah\Spawn\Exception\AbstractException
+     */
+    protected function askForClassname(InputInterface $input, string $type, string $classArgumentName, string $askPrompt, string $defaultName): ClassName
+    {
         $classNameStr = $input->getArgument($classArgumentName);
         if (! $classNameStr) {
             $classNameStr = $this->io->ask(
@@ -188,8 +213,16 @@ abstract class AbstractGeneratorCommand extends Command
         } else {
             $classNameStr = $this->inputValidatorService->validateClassName($classNameStr, $type);
         }
-        $className = new ClassName($classNameStr, $type, $this->inputValidatorService);
 
+        return new ClassName($classNameStr, $type, $this->inputValidatorService);
+    }
+
+    /**
+     * @throws \TYPO3\CMS\Core\Package\Exception\UnknownPackageException
+     * @throws \HellYeah\Spawn\Exception\AbstractException
+     */
+    protected function askForNamespacePrefix(InputInterface $input, ExtensionName $extension): NamespacePrefix
+    {
         $namespacePrefix = $input->getArgument('namespace');
         if (! $namespacePrefix) {
             $namespacePrefix = $this->extensionService->getPSR4NamespacePrefix($extension)->getValue();
@@ -203,19 +236,30 @@ abstract class AbstractGeneratorCommand extends Command
         } else {
             $namespacePrefix = $this->inputValidatorService->validateNamespacePrefix($namespacePrefix);
         }
-        $prefix = new NamespacePrefix($namespacePrefix, $this->inputValidatorService);
 
-        $config = $this->generatorRegistry->getConfig($type);
-        $namespace = new ClassNamespace($prefix, $config['subNamespace'], $this->inputValidatorService);
+        return new NamespacePrefix($namespacePrefix, $this->inputValidatorService);
+    }
 
-        $inputs = [
-            'type' => $type,
-            'extension' => $extension,
-            'className' => $className,
-            'namespace' => $namespace,
-        ];
-
-        // Handle additional attributes from registry
+    /**
+     * Handles additional attributes and options from the registry.
+     *
+     * @param InputInterface $input
+     * @param ExtensionName $extension
+     * @param ClassName $className
+     * @param array $config
+     * @param array $inputs
+     *
+     * @return array
+     * @throws \HellYeah\Spawn\Exception\AbstractException
+     */
+    protected function handleAdditionalInputsFromRegistry(
+        InputInterface $input,
+        ExtensionName $extension,
+        ClassName $className,
+        array $config,
+        array $inputs,
+    ): array {
+        // Handle attributes (e.g., commandName, commandDescription)
         if (isset($config['attributes']) && is_array($config['attributes'])) {
             $inputs['attributes'] = [];
             foreach ($config['attributes'] as $attribute) {
@@ -245,7 +289,34 @@ abstract class AbstractGeneratorCommand extends Command
             }
         }
 
+        // Handle additional options (e.g., schedulable)
+        if (isset($config['additionalOptions']) && is_array($config['additionalOptions'])) {
+            $inputs['options'] = [];
+            foreach ($config['additionalOptions'] as $optionName => $optionConfig) {
+                $value = $input->getArgument($optionConfig['argumentName']);
+                if (! $value) {
+                    if ($optionConfig['type'] === 'boolean' && isset($optionConfig['choices'])) {
+                        // Use choice for boolean options
+                        $value = $this->io->choice(
+                            $optionConfig['prompt'],
+                            array_combine($optionConfig['choices'], $optionConfig['choices']),
+                            $optionConfig['default']
+                        );
+                    } else {
+                        // Use ask for other types
+                        $value = $this->io->ask(
+                            $optionConfig['prompt'],
+                            $optionConfig['default'],
+                            fn(string $val) => $this->inputValidatorService->{$optionConfig['validator']}($val)
+                        );
+                    }
+                } else {
+                    $value = $this->inputValidatorService->{$optionConfig['validator']}($value);
+                }
+                $inputs['options'][$optionName] = $value; // Store as raw value (boolean for schedulable)
+            }
+        }
+
         return $inputs;
     }
-
 }

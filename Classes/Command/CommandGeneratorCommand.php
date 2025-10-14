@@ -37,7 +37,8 @@ class CommandGeneratorCommand extends AbstractGeneratorCommand
             ->addArgument('class', InputArgument::OPTIONAL, 'The command class name (e.g., "AwesomeCommand")')
             ->addArgument('namespace', InputArgument::OPTIONAL, 'The namespace prefix (e.g., "Vendor\\Extension\\")')
             ->addArgument('command-name', InputArgument::OPTIONAL, 'The command name (e.g., "awesome_extension:awesome")')
-            ->addArgument('command-description', InputArgument::OPTIONAL, 'The command description (e.g., "Executes awesome action")');
+            ->addArgument('command-description', InputArgument::OPTIONAL, 'The command description (e.g., "Executes awesome action")')
+            ->addArgument('schedulable', InputArgument::OPTIONAL, 'Is the command schedulable? (yes/no)');
     }
 
     /**

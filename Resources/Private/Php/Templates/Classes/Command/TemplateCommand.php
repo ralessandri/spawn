@@ -17,13 +17,11 @@ declare(strict_types=1);
 
 namespace TemplateCommand;
 
-use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'spawn:template-command', description: 'Template file for spawn create command')]
 class TemplateCommand extends Command
 {
     protected SymfonyStyle $io;

@@ -18,10 +18,11 @@ class FileWriterService
      *
      * @throws InvalidArgumentException|FileExistsException If invalid or exists.
      */
-    public function write(string $path, string $content): void
+    public function write(string $path, string $content, bool $override = false): void
     {
         $dirname = dirname($path);
 
+        // Validate path
         if (! GeneralUtility::validPathStr($path) || ! GeneralUtility::isAllowedAbsPath($path)) {
             throw new InvalidArgumentException(
                 'Invalid path: ' . $path,
@@ -29,17 +30,20 @@ class FileWriterService
             );
         }
 
-        if (file_exists($path)) {
+        // Check if file exists and override is not allowed
+        if (file_exists($path) && $override === false) {
             throw new FileExistsException(
                 'File already exists: ' . $path,
                 1759257194
             );
         }
 
+        // Ensure directory exists
         if (! file_exists($dirname)) {
             GeneralUtility::mkdir_deep($dirname);
         }
 
+        // Write content to file
         GeneralUtility::writeFile($path, $content);
     }
 }

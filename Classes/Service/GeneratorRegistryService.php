@@ -50,35 +50,41 @@ class GeneratorRegistryService
                 'targetDir' => 'Classes/Command/',
                 'classNameSuffix' => 'Command',
                 'attributes' => ['commandName', 'commandDescription'],
-                'postHooks' => ['updateServicesYaml'],
+                'postHooks' => ['addCommandToServicesYaml'],
+                'additionalOptions' => [
+                    'schedulable' => [
+                        'type' => 'boolean',
+                        'argumentName' => 'schedulable',
+                        'prompt' => 'Should the command be schedulable? (false/true)',
+                        'choices' => ['false', 'true'],
+                        'default' => 'false',
+                        'validator' => 'validateBoolean',
+                    ],
+                ],
             ],
             'middleware' => [
                 'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Middleware/TemplateMiddleware.php',
                 'subNamespace' => 'Middleware',
                 'targetDir' => 'Classes/Middleware/',
                 'classNameSuffix' => 'Middleware',
-                // 'postHooks' => ['updateServicesYaml'],
             ],
             'model' => [
                 'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Model/TemplateModel.php',
                 'subNamespace' => 'Domain\Model',
                 'targetDir' => 'Classes/Domain/Model/',
                 'classNameSuffix' => '',
-                // 'postHooks' => ['updateTca'],
             ],
             'repository' => [
                 'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Repository/TemplateRepository.php',
                 'subNamespace' => 'Domain\Repository',
                 'targetDir' => 'Classes/Domain/Repository/',
                 'classNameSuffix' => 'Repository',
-                // 'postHooks' => ['updateServicesYaml'],
             ],
             'event' => [
                 'templatePath' => 'EXT:spawn/Resources/Private/Php/Templates/Classes/Event/TemplateEvent.php',
                 'subNamespace' => 'Event',
                 'targetDir' => 'Classes/Event/',
                 'classNameSuffix' => 'Event',
-                //'postHooks' => ['updateServicesYaml'],
             ],
             // Add more types as needed, e.g. 'service', 'viewhelper'
         ];
